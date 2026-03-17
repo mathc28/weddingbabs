@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, ADMIN_PASSWORD } from '../config/cloudinary'
+import { ADMIN_PASSWORD } from '../config/cloudinary'
 
 export default function Admin() {
   const [authed, setAuthed] = useState(false)
@@ -22,27 +22,7 @@ export default function Admin() {
   const fetchPhotos = async () => {
     setLoading(true)
     try {
-      const timestamp = Math.floor(Date.now() / 1000)
-      const str = `tags=duo&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`
-      const msgBuffer = new TextEncoder().encode(str)
-      const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer)
-      const hashArray = Array.from(new Uint8Array(hashBuffer))
-      const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-      const fd = new FormData()
-      fd.append('tags', 'duo')
-      fd.append('timestamp', timestamp)
-      fd.append('api_key', CLOUDINARY_API_KEY)
-      fd.append('signature', signature)
-
-      const searchRes = await fetch(
-        `/cloudinary-api/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search?expression=tags%3Dduo&with_field=context&max_results=500`,
-        {
-          headers: {
-            Authorization: 'Basic ' + btoa(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`)
-          }
-        }
-      )
+      const searchRes = await fetch('/api/cloudinary-search')
       const data = await searchRes.json()
       setPhotos(data.resources || [])
     } catch (e) {
