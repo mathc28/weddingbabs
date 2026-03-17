@@ -1,0 +1,257 @@
+import { useState, useEffect } from 'react'
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET, ADMIN_PASSWORD } from '../config/cloudinary'
+
+export default function Admin() {
+  const [authed, setAuthed] = useState(false)
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [photos, setPhotos] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [selected, setSelected] = useState(null)
+
+  const handleLogin = (e) => {
+    e.preventDefault()
+    if (password === ADMIN_PASSWORD) {
+      setAuthed(true)
+      setError('')
+    } else {
+      setError('Mot de passe incorrect')
+    }
+  }
+
+  const fetchPhotos = async () => {
+    setLoading(true)
+    try {
+      const timestamp = Math.floor(Date.now() / 1000)
+      const str = `tags=duo&timestamp=${timestamp}${CLOUDINARY_API_SECRET}`
+      const msgBuffer = new TextEncoder().encode(str)
+      const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+      const fd = new FormData()
+      fd.append('tags', 'duo')
+      fd.append('timestamp', timestamp)
+      fd.append('api_key', CLOUDINARY_API_KEY)
+      fd.append('signature', signature)
+
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search`, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Basic ' + btoa(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`)
+        },
+        body: JSON.stringify({ expression: 'tags=duo', with_field: 'context', max_results: 500 }),
+      })
+
+      // Utilise l'API Search via GET avec auth basique
+      const searchRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search?expression=tags%3Dduo&with_field=context&max_results=500`,
+        {
+          headers: {
+            Authorization: 'Basic ' + btoa(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`)
+          }
+        }
+      )
+      const data = await searchRes.json()
+      setPhotos(data.resources || [])
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (authed) fetchPhotos()
+  }, [authed])
+
+  const getContext = (photo) => {
+    const ctx = photo.context?.custom || {}
+    return {
+      prenom: ctx.prenom || '—',
+      nom: ctx.nom || '—',
+      duoPerso: ctx.duo_perso || '—',
+      duoPartenaire: ctx.duo_partenaire || '—',
+    }
+  }
+
+  if (!authed) {
+    return (
+      <div className="app">
+        <div className="bg-pattern" />
+        <div className="form-wrapper">
+          <div className="ticket-outer">
+            <div className="ticket-header">
+              <div className="header-left"><span className="logo-badge">BWF</span></div>
+              <div className="header-center">
+                <p className="header-event">BABYLON WEDDING FESTIVAL</p>
+                <p className="header-date">ESPACE ADMIN</p>
+              </div>
+            </div>
+            <div className="perfo" />
+            <div className="ticket-body">
+              <form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:'16px'}}>
+                <p className="step-title">ACCÈS ADMIN</p>
+                <div className="field">
+                  <label>MOT DE PASSE</label>
+                  <input
+                    className="stamp-input"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
+                </div>
+                {error && <p className="error-msg">{error}</p>}
+                <button type="submit" className="btn-main">ENTRER →</button>
+              </form>
+            </div>
+            <div className="perfo" />
+            <div className="ticket-stub">
+              <span>MAÏLYS & KÉVIN</span>
+              <span>DOMAINE VALSOYO</span>
+              <span>11.04.2026</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="app" style={{alignItems:'flex-start', paddingTop:'32px'}}>
+      <div className="bg-pattern" />
+      <div style={{position:'relative',zIndex:1,width:'100%',maxWidth:'900px',margin:'0 auto'}}>
+
+        {/* Header admin */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'24px',padding:'0 8px'}}>
+          <div>
+            <p style={{fontFamily:'Bebas Neue, cursive',fontSize:'32px',color:'#FFD43B',letterSpacing:'3px'}}>
+              GALERIE DES DUOS
+            </p>
+            <p style={{fontSize:'13px',color:'rgba(255,255,255,0.4)',fontWeight:'600',letterSpacing:'1px'}}>
+              {photos.length} photo{photos.length !== 1 ? 's' : ''} reçue{photos.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+          <button className="btn-main" style={{width:'auto',padding:'10px 20px',fontSize:'14px'}} onClick={fetchPhotos}>
+            ↻ ACTUALISER
+          </button>
+        </div>
+
+        {loading && (
+          <div style={{textAlign:'center',padding:'60px',color:'rgba(255,255,255,0.4)',fontFamily:'Bebas Neue, cursive',fontSize:'20px',letterSpacing:'2px'}}>
+            CHARGEMENT...
+          </div>
+        )}
+
+        {!loading && photos.length === 0 && (
+          <div style={{textAlign:'center',padding:'60px',color:'rgba(255,255,255,0.3)',fontFamily:'Bebas Neue, cursive',fontSize:'18px',letterSpacing:'2px'}}>
+            AUCUNE PHOTO POUR L'INSTANT
+          </div>
+        )}
+
+        {/* Grille photos */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))',gap:'16px',padding:'0 8px'}}>
+          {photos.map(photo => {
+            const ctx = getContext(photo)
+            return (
+              <div
+                key={photo.public_id}
+                onClick={() => setSelected(photo)}
+                style={{
+                  background:'linear-gradient(160deg, #FFD43B 0%, #F5A623 100%)',
+                  borderRadius:'12px',
+                  overflow:'hidden',
+                  cursor:'pointer',
+                  transition:'transform 0.2s',
+                  boxShadow:'0 8px 24px rgba(0,0,0,0.4)'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform='scale(1.03)'}
+                onMouseLeave={e => e.currentTarget.style.transform='scale(1)'}
+              >
+                <img
+                  src={photo.secure_url}
+                  alt={ctx.prenom}
+                  style={{width:'100%',height:'180px',objectFit:'cover',display:'block'}}
+                />
+                <div style={{padding:'12px 14px'}}>
+                  <p style={{fontFamily:'Bebas Neue, cursive',fontSize:'18px',letterSpacing:'1px',color:'#100800',lineHeight:1.1}}>
+                    {ctx.prenom} {ctx.nom}
+                  </p>
+                  <div style={{display:'flex',alignItems:'center',gap:'6px',marginTop:'6px'}}>
+                    <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'12px',letterSpacing:'1px',padding:'3px 10px',borderRadius:'100px'}}>
+                      {ctx.duoPerso}
+                    </span>
+                    <span style={{fontSize:'12px',color:'rgba(0,0,0,0.3)',fontFamily:'Bebas Neue, cursive'}}>+</span>
+                    <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'12px',letterSpacing:'1px',padding:'3px 10px',borderRadius:'100px'}}>
+                      {ctx.duoPartenaire}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Modal photo */}
+        {selected && (
+          <div
+            onClick={() => setSelected(null)}
+            style={{
+              position:'fixed',inset:0,
+              background:'rgba(0,0,0,0.85)',
+              display:'flex',alignItems:'center',justifyContent:'center',
+              zIndex:100,padding:'24px'
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background:'linear-gradient(160deg, #FFD43B 0%, #F5A623 100%)',
+                borderRadius:'16px',overflow:'hidden',
+                maxWidth:'480px',width:'100%',
+                boxShadow:'0 30px 80px rgba(0,0,0,0.7)'
+              }}
+            >
+              <img src={selected.secure_url} alt="" style={{width:'100%',maxHeight:'360px',objectFit:'cover',display:'block'}} />
+              <div style={{padding:'16px 20px'}}>
+                {(() => {
+                  const ctx = getContext(selected)
+                  return (
+                    <>
+                      <p style={{fontFamily:'Bebas Neue, cursive',fontSize:'24px',letterSpacing:'2px',color:'#100800'}}>
+                        {ctx.prenom} {ctx.nom}
+                      </p>
+                      <div style={{display:'flex',alignItems:'center',gap:'8px',margin:'8px 0 16px'}}>
+                        <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'14px',letterSpacing:'1px',padding:'4px 14px',borderRadius:'100px'}}>{ctx.duoPerso}</span>
+                        <span style={{fontFamily:'Bebas Neue, cursive',fontSize:'18px',color:'rgba(0,0,0,0.3)'}}>+</span>
+                        <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'14px',letterSpacing:'1px',padding:'4px 14px',borderRadius:'100px'}}>{ctx.duoPartenaire}</span>
+                      </div>
+                      <div style={{display:'flex',gap:'10px'}}>
+                        <a
+                          href={selected.secure_url}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{flex:1,background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'16px',letterSpacing:'2px',border:'none',borderRadius:'8px',padding:'12px',cursor:'pointer',textAlign:'center',textDecoration:'none',display:'block'}}
+                        >
+                          ↓ TÉLÉCHARGER
+                        </a>
+                        <button
+                          onClick={() => setSelected(null)}
+                          style={{background:'rgba(0,0,0,0.1)',color:'rgba(0,0,0,0.5)',fontFamily:'Bebas Neue, cursive',fontSize:'16px',letterSpacing:'2px',border:'none',borderRadius:'8px',padding:'12px 16px',cursor:'pointer'}}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
