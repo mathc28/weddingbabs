@@ -3,8 +3,6 @@ import { CLOUDINARY_UPLOAD_URL, CLOUDINARY_UPLOAD_PRESET } from '../config/cloud
 
 export default function UploadForm({ onSuccess }) {
   const [step, setStep] = useState(1)
-  const [prenom, setPrenom] = useState('')
-  const [nom, setNom] = useState('')
   const [duoPerso, setDuoPerso] = useState('')
   const [duoPartenaire, setDuoPartenaire] = useState('')
   const [photo, setPhoto] = useState(null)
@@ -20,8 +18,7 @@ export default function UploadForm({ onSuccess }) {
     setPreview(URL.createObjectURL(file))
   }
 
-  const canNext1 = prenom.trim() && nom.trim()
-  const canNext2 = duoPerso.trim() && duoPartenaire.trim()
+  const canNext1 = duoPerso.trim() && duoPartenaire.trim()
   const canSubmit = photo
 
   const compressImage = (file) => {
@@ -50,12 +47,12 @@ export default function UploadForm({ onSuccess }) {
       const fd = new FormData()
       fd.append('file', compressed)
       fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
-      fd.append('context', `prenom=${prenom}|nom=${nom}|duo_perso=${duoPerso}|duo_partenaire=${duoPartenaire}`)
+      fd.append('context', `duo_perso=${duoPerso}|duo_partenaire=${duoPartenaire}`)
       fd.append('tags', `duo,${duoPerso},${duoPartenaire}`)
       const res = await fetch(CLOUDINARY_UPLOAD_URL, { method: 'POST', body: fd })
       if (!res.ok) throw new Error('Upload échoué')
       const data = await res.json()
-      onSuccess({ prenom, nom, duoPerso, duoPartenaire, url: data.secure_url })
+      onSuccess({ duoPerso, duoPartenaire, url: data.secure_url })
     } catch (e) {
       setError("Oups, une erreur s'est produite. Réessaie !")
     } finally {
@@ -87,45 +84,15 @@ export default function UploadForm({ onSuccess }) {
         {/* Steps */}
         <div className="ticket-body">
           <div className="steps-row">
-            {[1,2,3].map(s => (
+            {[1,2].map(s => (
               <div key={s} className={`step-pip ${step === s ? 'active' : step > s ? 'done' : ''}`}>
                 {step > s ? '✓' : s}
               </div>
             ))}
           </div>
 
-          {/* STEP 1 — Identité */}
+          {/* STEP 1 — Duo */}
           {step === 1 && (
-            <div className="step-content">
-              <p className="step-title">TON IDENTITÉ</p>
-              <div className="field-row">
-                <div className="field">
-                  <label>PRÉNOM</label>
-                  <input
-                    className="stamp-input"
-                    placeholder="Timon"
-                    value={prenom}
-                    onChange={e => setPrenom(e.target.value)}
-                  />
-                </div>
-                <div className="field">
-                  <label>NOM</label>
-                  <input
-                    className="stamp-input"
-                    placeholder="Berkani"
-                    value={nom}
-                    onChange={e => setNom(e.target.value)}
-                  />
-                </div>
-              </div>
-              <button className="btn-main" disabled={!canNext1} onClick={() => setStep(2)}>
-                SUIVANT →
-              </button>
-            </div>
-          )}
-
-          {/* STEP 2 — Duo */}
-          {step === 2 && (
             <div className="step-content">
               <p className="step-title">TON DUO</p>
               <div className="field">
@@ -147,15 +114,12 @@ export default function UploadForm({ onSuccess }) {
                   onChange={e => setDuoPartenaire(e.target.value)}
                 />
               </div>
-              <div className="btn-row">
-                <button className="btn-secondary" onClick={() => setStep(1)}>← RETOUR</button>
-                <button className="btn-main" disabled={!canNext2} onClick={() => setStep(3)}>SUIVANT →</button>
-              </div>
+              <button className="btn-main" disabled={!canNext1} onClick={() => setStep(2)}>SUIVANT →</button>
             </div>
           )}
 
-          {/* STEP 3 — Photo */}
-          {step === 3 && (
+          {/* STEP 2 — Photo */}
+          {step === 2 && (
             <div className="step-content">
               <p className="step-title">VOTRE PHOTO DE DUO</p>
               <div className="photo-drop" onClick={() => fileRef.current.click()}>
@@ -178,7 +142,7 @@ export default function UploadForm({ onSuccess }) {
                 <span className="duo-badge">{duoPartenaire}</span>
               </div>
               <div className="btn-row">
-                <button className="btn-secondary" onClick={() => setStep(2)}>← RETOUR</button>
+                <button className="btn-secondary" onClick={() => setStep(1)}>← RETOUR</button>
                 <button className="btn-main" disabled={!canSubmit || loading} onClick={handleSubmit}>
                   {loading ? 'ENVOI...' : 'VALIDER 🎉'}
                 </button>

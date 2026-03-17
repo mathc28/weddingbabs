@@ -35,17 +35,8 @@ export default function Admin() {
       fd.append('api_key', CLOUDINARY_API_KEY)
       fd.append('signature', signature)
 
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search`, {
-        method: 'POST',
-        headers: {
-          Authorization: 'Basic ' + btoa(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`)
-        },
-        body: JSON.stringify({ expression: 'tags=duo', with_field: 'context', max_results: 500 }),
-      })
-
-      // Utilise l'API Search via GET avec auth basique
       const searchRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search?expression=tags%3Dduo&with_field=context&max_results=500`,
+        `/cloudinary-api/v1_1/${CLOUDINARY_CLOUD_NAME}/resources/search?expression=tags%3Dduo&with_field=context&max_results=500`,
         {
           headers: {
             Authorization: 'Basic ' + btoa(`${CLOUDINARY_API_KEY}:${CLOUDINARY_API_SECRET}`)
@@ -66,10 +57,8 @@ export default function Admin() {
   }, [authed])
 
   const getContext = (photo) => {
-    const ctx = photo.context?.custom || {}
+    const ctx = photo.context || {}
     return {
-      prenom: ctx.prenom || '—',
-      nom: ctx.nom || '—',
       duoPerso: ctx.duo_perso || '—',
       duoPartenaire: ctx.duo_partenaire || '—',
     }
@@ -175,15 +164,12 @@ export default function Admin() {
                   style={{width:'100%',height:'180px',objectFit:'cover',display:'block'}}
                 />
                 <div style={{padding:'12px 14px'}}>
-                  <p style={{fontFamily:'Bebas Neue, cursive',fontSize:'18px',letterSpacing:'1px',color:'#100800',lineHeight:1.1}}>
-                    {ctx.prenom} {ctx.nom}
-                  </p>
-                  <div style={{display:'flex',alignItems:'center',gap:'6px',marginTop:'6px'}}>
-                    <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'12px',letterSpacing:'1px',padding:'3px 10px',borderRadius:'100px'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+                    <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'15px',letterSpacing:'1px',padding:'4px 12px',borderRadius:'100px'}}>
                       {ctx.duoPerso}
                     </span>
-                    <span style={{fontSize:'12px',color:'rgba(0,0,0,0.3)',fontFamily:'Bebas Neue, cursive'}}>+</span>
-                    <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'12px',letterSpacing:'1px',padding:'3px 10px',borderRadius:'100px'}}>
+                    <span style={{fontSize:'14px',color:'rgba(0,0,0,0.4)',fontFamily:'Bebas Neue, cursive'}}>+</span>
+                    <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'15px',letterSpacing:'1px',padding:'4px 12px',borderRadius:'100px'}}>
                       {ctx.duoPartenaire}
                     </span>
                   </div>
@@ -219,10 +205,7 @@ export default function Admin() {
                   const ctx = getContext(selected)
                   return (
                     <>
-                      <p style={{fontFamily:'Bebas Neue, cursive',fontSize:'24px',letterSpacing:'2px',color:'#100800'}}>
-                        {ctx.prenom} {ctx.nom}
-                      </p>
-                      <div style={{display:'flex',alignItems:'center',gap:'8px',margin:'8px 0 16px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:'8px',margin:'0 0 16px'}}>
                         <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'14px',letterSpacing:'1px',padding:'4px 14px',borderRadius:'100px'}}>{ctx.duoPerso}</span>
                         <span style={{fontFamily:'Bebas Neue, cursive',fontSize:'18px',color:'rgba(0,0,0,0.3)'}}>+</span>
                         <span style={{background:'#100800',color:'#FFD43B',fontFamily:'Bebas Neue, cursive',fontSize:'14px',letterSpacing:'1px',padding:'4px 14px',borderRadius:'100px'}}>{ctx.duoPartenaire}</span>
